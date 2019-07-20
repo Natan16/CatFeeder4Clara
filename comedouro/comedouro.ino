@@ -14,6 +14,7 @@ Servo myservo;  // create servo object to control a servo
 // twelve servo objects can be created on most boards
 const int buttonPin = 13;
 const int buzzerPin = 3;
+long CycleTime = 28800000; //Time (in miliseconds) of the feeding cycle ( 8 hours )
 
 int buttonState = 1;  
 int prevButtonState = 1;
@@ -27,10 +28,12 @@ void setup() {
   Serial.begin(9600);
 }
 
-void loop() {
-  buttonState = digitalRead(buttonPin);
-  Serial.println(buttonState);
-  if ( buttonState == LOW && prevButtonState == HIGH ){
+
+unsigned long StartTime = millis();
+
+
+void feed(){
+    
     digitalWrite(buzzerPin , LOW);
     delay(1000);
     pos = 0 ;
@@ -38,11 +41,27 @@ void loop() {
     delay(1000);
     pos = 90;
     myservo.write(pos);
+}
+
+
+void loop() {
+  buttonState = digitalRead(buttonPin);
+  //Serial.println(buttonState);
+  unsigned long CurrentTime = millis();
+  unsigned long ElapsedTime = CurrentTime - StartTime;
   
+  if ( buttonState == LOW && prevButtonState == HIGH ){
+    feed();
+  }
+  else if (ElapsedTime > CycleTime){
+    feed();
+    StartTime = millis();
+    Serial.println(ElapsedTime);
   }
   else {
     digitalWrite(buzzerPin , HIGH ) ; 
   }
+  
   prevButtonState = buttonState;
   
   
