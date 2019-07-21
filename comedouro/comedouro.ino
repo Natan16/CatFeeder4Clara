@@ -8,6 +8,11 @@
  the depositing box and the storage box align for a moment. 
 */
 
+
+//the next step is to control the amount of food deposited based on the cat's needs
+//later introduce sensors that remind the user its time to buy more cat food and 
+//sends text message automatically to the petshop. Also, a report can be generated 
+//so the vet can have more information.
 #include <Servo.h>
 
 Servo myservo;  // create servo object to control a servo
@@ -24,6 +29,7 @@ int pos = 0;    // variable to store the servo position
 void setup() {
   pinMode(buttonPin , INPUT);
   pinMode(buzzerPin , OUTPUT);
+  digitalWrite(buzzerPin , HIGH ) ;
   myservo.attach(9);  // attaches the servo on pin 9 to the servo object
   Serial.begin(9600);
 }
@@ -32,10 +38,21 @@ void setup() {
 unsigned long StartTime = millis();
 
 
+void shake(){
+    for (int i = 0 ; i < 10 ; i++){
+      delay(300);
+      myservo.write(120);
+      delay(300);
+      myservo.write(90);
+    } 
+}
+
+
 void feed(){
     
     digitalWrite(buzzerPin , LOW);
     delay(1000);
+    digitalWrite(buzzerPin , HIGH ) ; 
     pos = 0 ;
     myservo.write(pos); 
     delay(1000);
@@ -54,6 +71,7 @@ void loop() {
     feed();
   }
   else if (ElapsedTime > CycleTime){
+    shake();
     feed();
     StartTime = millis();
     Serial.println(ElapsedTime);
@@ -63,7 +81,7 @@ void loop() {
   }
   
   prevButtonState = buttonState;
-  
+   
   
 }
 
