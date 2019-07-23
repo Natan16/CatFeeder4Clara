@@ -14,26 +14,39 @@
 //sends text message automatically to the petshop. Also, a report can be generated 
 //so the vet can have more information.
 #include <Servo.h>
-#include <math.h>
+#include <Wire.h>
+#include <BH1750.h>
+
+/*
+  BH1750 can be physically configured to use two I2C addresses:
+    - 0x23 (most common) (if ADD pin had < 0.7VCC voltage)
+    - 0x5C (if ADD pin had > 0.7VCC voltage)
+
+  Library uses 0x23 address as default, but you can define any other address.
+  If you had troubles with default value - try to change it to 0x5C.
+
+*/
+BH1750 lightMeter(0x23);
 
 Servo myservo;  // create servo object to control a servo
 // twelve servo objects can be created on most boards
 const int ledPin = 7;
 const int buttonPin = 3;
 const int buzzerPin = 8;
-const int groundPin = 12;
 
 long CycleTime = 28800000; //Time (in miliseconds) of the feeding cycle ( 8 hours )
 
 int buttonState = 1;  
 int prevButtonState = 1;
 
-
+//TODO: make all constants uppercase
 //edit these values based on your case
 int catAgeInMonths = 4;
 int predictedAdultWeightInKg = 4;
 const float gramsPerPortion = 3.6;
 const int cyclesPerDay = 3;
+const float LUX_THRESHOLD = 600;
+ 
 //according to the packet 
 int dailyFoodPerAge[3][11] = {{40 , 51 , 55 , 57 , 55 , 53 , 50 , 47 , 44 , 42 , 40},
                    {47 , 60 , 65 , 67 , 65 , 63 , 60 , 56 , 54 , 51 , 50},
@@ -64,8 +77,18 @@ void setup() {
   digitalWrite(buzzerPin , HIGH ) ;
   myservo.attach(10);  // attaches the servo on pin 10 to the servo object
   Serial.begin(9600);
-  pinMode(groundPin , OUTPUT);
-  digitalWrite(groundPin , LOW ) ;
+
+
+  // Initialize the I2C bus (BH1750 library doesn't do this automatically)
+  Wire.begin();
+  // begin returns a boolean that can be used to detect setup problems.
+  if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE)) { //TODO : verify wether I can change mode after the setup 
+    Serial.println(F("BH1750 Advanced begin"));
+  }
+  else {
+    Serial.println(F("Error initialising BH1750"));
+  }
+
 
 }
 
@@ -82,13 +105,26 @@ void shake(){
     } 
 }
 
+bool isEmpty = false;
+float blinkLedAndGaugeLux(){
+  digitalWrite(ledPin , HIGH);
+  delay(1000);
+  
+  float lux = lightMeter.readLightLevel();
+  Serial.print("Light: ");
+  Serial.print(lux);
+  Serial.println(" lx");
+  delay(1000);
+  digitalWrite(ledPin , LOW);
+  return lux;   
+}
+
 
 void buzz(){
-   digitalWrite(ledPin , HIGH);
    digitalWrite(buzzerPin , LOW);
    delay(1000);
    digitalWrite(buzzerPin , HIGH ) ;
-   digitalWrite(ledPin , LOW); 
+  
 }
 
 void feed(){
@@ -111,15 +147,33 @@ Serial.println(dailyFoodPerAge[predictedAdultWeightInKg - 3][catAgeInMonths - 2]
   
     //Serial.println(numberOfPortionsPerFeedingCycle);
   if ( buttonState == LOW && prevButtonState == HIGH ){
-    buzz(); 
+    float lux = blinkLedAndGaugeLux(); //TODO : replace delays with proper timers
+    if ( lux < LUX_THRESHOLD ){
+      isEmpty = false;
+    } 
+    else {
+      isEmpty = true;  
+    } 
+     
+    
+    if (isEmpty) 
+         buzz();
     feed();
   }
   else if (ElapsedTime > CycleTime){
     shake();
-    buzz();
     //feed as many times as the cat needs
     for(int i = 0 ; i < numberOfPortionsPerFeedingCycle[currentCycle] ; i++){
+      float lux = blinkLedAndGaugeLux(); //TODO : replace delays with proper timers
+      if ( lux < LUX_THRESHOLD ){
+        isEmpty = false;
+      } 
+      else {
+        isEmpty = true;  
+      }
       feed();
+      if (isEmpty) 
+         buzz();
     }
     currentCycle = (currentCycle + 1)%3;
     StartTime = millis();
@@ -127,6 +181,21 @@ Serial.println(dailyFoodPerAge[predictedAdultWeightInKg - 3][catAgeInMonths - 2]
   }
   else {
     digitalWrite(buzzerPin , HIGH ) ; 
+  }
+
+  //if vessel is empty, keep led on and reads continuously the light sensor, waiting for a change of state
+  if (isEmpty){
+    digitalWrite(ledPin , HIGH );
+    float lux = lightMeter.readLightLevel();
+    Serial.print("Light: ");
+    Serial.print(lux);
+    Serial.println(" lx");
+
+    if ( lux < LUX_THRESHOLD ){
+      isEmpty = false;
+      digitalWrite(ledPin , LOW ); 
+    }
+    delay(1000);
   }
   
   prevButtonState = buttonState;
