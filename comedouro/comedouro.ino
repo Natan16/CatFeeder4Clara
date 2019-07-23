@@ -1,4 +1,4 @@
-/* 
+  /* 
  There is a buzzer that plays everytime the 
  food is about to be deposited. Food can be deposited 
  in 2 distinct ways. 
@@ -18,8 +18,10 @@
 
 Servo myservo;  // create servo object to control a servo
 // twelve servo objects can be created on most boards
-const int buttonPin = 13;
-const int buzzerPin = 3;
+const int ledPin = 7;
+const int buttonPin = 3;
+const int buzzerPin = 8;
+const int groundPin = 12;
 
 long CycleTime = 28800000; //Time (in miliseconds) of the feeding cycle ( 8 hours )
 
@@ -54,11 +56,17 @@ void setup() {
     } 
      
   }
+  
   pinMode(buttonPin , INPUT);
+  pinMode(ledPin , OUTPUT );
+  digitalWrite(ledPin , HIGH );
   pinMode(buzzerPin , OUTPUT);
   digitalWrite(buzzerPin , HIGH ) ;
-  myservo.attach(9);  // attaches the servo on pin 9 to the servo object
+  myservo.attach(10);  // attaches the servo on pin 10 to the servo object
   Serial.begin(9600);
+  pinMode(groundPin , OUTPUT);
+  digitalWrite(groundPin , LOW ) ;
+
 }
 
 
@@ -76,9 +84,11 @@ void shake(){
 
 
 void buzz(){
+   digitalWrite(ledPin , HIGH);
    digitalWrite(buzzerPin , LOW);
    delay(1000);
-   digitalWrite(buzzerPin , HIGH ) ; 
+   digitalWrite(buzzerPin , HIGH ) ;
+   digitalWrite(ledPin , LOW); 
 }
 
 void feed(){
@@ -122,4 +132,3 @@ Serial.println(dailyFoodPerAge[predictedAdultWeightInKg - 3][catAgeInMonths - 2]
   prevButtonState = buttonState;
   
 }
-
