@@ -16,7 +16,7 @@
 #include <Servo.h>
 #include <Wire.h>
 #include <BH1750.h>
-
+#include <i2cdetect.h>
 /*
   BH1750 can be physically configured to use two I2C addresses:
     - 0x23 (most common) (if ADD pin had < 0.7VCC voltage)
@@ -45,7 +45,7 @@ int catAgeInMonths = 4;
 int predictedAdultWeightInKg = 4;
 const float gramsPerPortion = 3.6;
 const int cyclesPerDay = 3;
-const float LUX_THRESHOLD = 600;
+const float LUX_THRESHOLD = 1;
  
 //according to the packet 
 int dailyFoodPerAge[3][11] = {{40 , 51 , 55 , 57 , 55 , 53 , 50 , 47 , 44 , 42 , 40},
@@ -78,11 +78,12 @@ void setup() {
   myservo.attach(10);  // attaches the servo on pin 10 to the servo object
   Serial.begin(9600);
 
-
+  
   // Initialize the I2C bus (BH1750 library doesn't do this automatically)
   Wire.begin();
+  i2cdetect();
   // begin returns a boolean that can be used to detect setup problems.
-  if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE)) { //TODO : verify wether I can change mode after the setup 
+  if (lightMeter.begin()) { //TODO : verify wether I can change mode after the setup 
     Serial.println(F("BH1750 Advanced begin"));
   }
   else {
@@ -135,67 +136,81 @@ void feed(){
     myservo.write(pos);
     delay(1000);
 }
-
+int cont = 0;
 int currentCycle = 0; 
 void loop() {
-Serial.println(dailyFoodPerAge[predictedAdultWeightInKg - 3][catAgeInMonths - 2]);
-
+//Serial.println(dailyFoodPerAge[predictedAdultWeightInKg - 3][catAgeInMonths - 2]);
+  //Serial.println(isEmpty);
   buttonState = digitalRead(buttonPin);
   //Serial.println(buttonState);
   unsigned long CurrentTime = millis();
   unsigned long ElapsedTime = CurrentTime - StartTime;
-  
+  if( !isEmpty ){
     //Serial.println(numberOfPortionsPerFeedingCycle);
-  if ( buttonState == LOW && prevButtonState == HIGH ){
-    float lux = blinkLedAndGaugeLux(); //TODO : replace delays with proper timers
-    if ( lux < LUX_THRESHOLD ){
-      isEmpty = false;
-    } 
-    else {
-      isEmpty = true;  
-    } 
-     
-    
-    if (isEmpty) 
-         buzz();
-    feed();
-  }
-  else if (ElapsedTime > CycleTime){
-    shake();
-    //feed as many times as the cat needs
-    for(int i = 0 ; i < numberOfPortionsPerFeedingCycle[currentCycle] ; i++){
+    if ( buttonState == LOW && prevButtonState == HIGH ){
       float lux = blinkLedAndGaugeLux(); //TODO : replace delays with proper timers
       if ( lux < LUX_THRESHOLD ){
         isEmpty = false;
       } 
       else {
         isEmpty = true;  
-      }
-      feed();
+      } 
+       
+      
       if (isEmpty) 
-         buzz();
+           buzz();
+      feed();
     }
-    currentCycle = (currentCycle + 1)%3;
-    StartTime = millis();
-    //Serial.println(ElapsedTime);
+    else if (ElapsedTime > CycleTime){
+      shake();
+      //feed as many times as the cat needs
+      for(int i = 0 ; i < numberOfPortionsPerFeedingCycle[currentCycle] ; i++){
+        float lux = blinkLedAndGaugeLux(); //TODO : replace delays with proper timers
+        if ( lux < LUX_THRESHOLD ){
+          isEmpty = false;
+        } 
+        else {
+          isEmpty = true;  
+        }
+        feed();
+        if (isEmpty) 
+           buzz();
+      }
+      currentCycle = (currentCycle + 1)%3;
+      StartTime = millis();
+      //Serial.println(ElapsedTime);
+    }
+    else {
+      digitalWrite(buzzerPin , HIGH ) ; 
+    }
   }
-  else {
-    digitalWrite(buzzerPin , HIGH ) ; 
-  }
-
+  //
+  //Serial.print("Light: ");
+  //Serial.print(lux);
+  //Serial.println(" lx");
+  //Serial.println(buttonState);
+    
   //if vessel is empty, keep led on and reads continuously the light sensor, waiting for a change of state
   if (isEmpty){
+    
     digitalWrite(ledPin , HIGH );
+    delay(1000);  
     float lux = lightMeter.readLightLevel();
     Serial.print("Light: ");
     Serial.print(lux);
     Serial.println(" lx");
-
-    if ( lux < LUX_THRESHOLD ){
+  //Serial.println(buttonState);
+  
+    if ( lux < LUX_THRESHOLD){
+      cont = cont + 1;
       isEmpty = false;
       digitalWrite(ledPin , LOW ); 
     }
-    delay(1000);
+    else{
+      cont = 0 ;
+    //  isEmpty  = true;
+    }
+    
   }
   
   prevButtonState = buttonState;
