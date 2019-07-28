@@ -30,9 +30,9 @@ BH1750 lightMeter(0x23);
 
 Servo myservo;  // create servo object to control a servo
 // twelve servo objects can be created on most boards
-const int ledPin = 7;
-const int buttonPin = 3;
-const int buzzerPin = 8;
+const int ledPin = 3;
+const int buttonPin = 2;
+const int buzzerPin = 4;
 
 long CycleTime = 28800000; //Time (in miliseconds) of the feeding cycle ( 8 hours )
 
@@ -43,9 +43,9 @@ int prevButtonState = 1;
 //edit these values based on your case
 int catAgeInMonths = 4;
 int predictedAdultWeightInKg = 4;
-const float gramsPerPortion = 3.6;
+const float gramsPerPortion = 5.3;
 const int cyclesPerDay = 3;
-const float LUX_THRESHOLD = 1;
+const float LUX_THRESHOLD = 0.5;
  
 //according to the packet 
 int dailyFoodPerAge[3][11] = {{40 , 51 , 55 , 57 , 55 , 53 , 50 , 47 , 44 , 42 , 40},
@@ -100,9 +100,9 @@ unsigned long StartTime = millis();
 void shake(){
     for (int i = 0 ; i < 10 ; i++){
       delay(300);
-      myservo.write(120);
+      myservo.write(300);
       delay(300);
-      myservo.write(90);
+      myservo.write(270);
     } 
 }
 
@@ -129,10 +129,10 @@ void buzz(){
 }
 
 void feed(){
-    pos = 0 ;
+    pos = 90 ;
     myservo.write(pos); 
     delay(1000);
-    pos = 90;
+    pos = 300;
     myservo.write(pos);
     delay(1000);
 }
@@ -142,7 +142,7 @@ void loop() {
 //Serial.println(dailyFoodPerAge[predictedAdultWeightInKg - 3][catAgeInMonths - 2]);
   //Serial.println(isEmpty);
   buttonState = digitalRead(buttonPin);
-  //Serial.println(buttonState);
+  //Serial.println(buttonState\m);
   unsigned long CurrentTime = millis();
   unsigned long ElapsedTime = CurrentTime - StartTime;
   if( !isEmpty ){
@@ -196,11 +196,11 @@ void loop() {
     digitalWrite(ledPin , HIGH );
     delay(1000);  
     float lux = lightMeter.readLightLevel();
-    Serial.print("Light: ");
+     Serial.print("Light: ");
     Serial.print(lux);
     Serial.println(" lx");
   //Serial.println(buttonState);
-  
+        
     if ( lux < LUX_THRESHOLD){
       cont = cont + 1;
       isEmpty = false;
